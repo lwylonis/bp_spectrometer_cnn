@@ -124,7 +124,7 @@ void CnnKernel(
 
     // —— BatchNorm2 (inference) on L2[kChannels2][kSize2] ——
     // PyTorch uses eps = 1e-5 by default
-    constexpr float eps = 1e-5f;
+
     for (int oc = 0; oc < kChannels2; ++oc) {
         float inv_sigma = 1.0f / std::sqrt(bn2_running_var[oc] + eps);
         for (int x = 0; x < kSize2; ++x) {
@@ -181,7 +181,7 @@ void CnnKernel(
 
     // —— BatchNorm3 (inference) ——
     // PyTorch uses eps = 1e-5 by default
-    constexpr float eps = 1e-5f;
+
     for (int oc = 0; oc < kChannels3; ++oc) {
         float inv_sigma = 1.0f / std::sqrt(bn3_running_var[oc] + eps);
         for (int x = 0; x < kSize3; ++x) {
@@ -227,4 +227,21 @@ void CnnKernel(
         // write raw scores; RMS normalization comes afterward
         output[o] = acc;
     }
+
+    // 1) Compute mean of squares (ms)
+    float ms = 0.f;
+    for (int i = 0; i < kOutSize; ++i) {
+        ms += output[i] * output[i];
+    }
+    ms /= kOutSize;
+
+    // 2) Compute RMS with epsilon for stability
+    constexpr float eps2 = 1e-6f;
+    float rms = std::sqrt(ms + eps2);
+
+    // 3) Divide each element by RMS
+    for (int i = 0; i < kOutSize; ++i) {
+        output[i] /= rms;
+    }
+
 }

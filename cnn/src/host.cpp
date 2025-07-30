@@ -41,7 +41,7 @@ void CnnSequential(
     aligned_vector<float> & output) {
 
     //TODO
-    for (i = 0; i < 1000; ++i) { output[i] = 0; } //TEMPORARY
+    for (int i = 0; i < 1000; ++i) { output[i] = 0; } //TEMPORARY
 
 }
 
