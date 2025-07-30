@@ -54,7 +54,7 @@ const int kKernel3 = 3;
 // x = self.dropout(x)
 // x = x.flatten(1)
 
-const int LinearSize1 = 640;
+const int LinearSize1 = 640; //64 * 10
 
 // x = self.fc1(x)
 
