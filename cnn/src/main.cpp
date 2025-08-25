@@ -87,8 +87,6 @@ int main(int argc, char** argv) {
         h_output
     );
     const auto end = steady_clock::now();
-
-    //See if I can add flops?
     uint64_t run_time_us = duration_cast<microseconds>(end - begin).count();
 
     // Compute GFLOPS: count MACs (2 FLOPs each) for conv and FC layers
