@@ -47,7 +47,7 @@ void CnnKernel(
     tapa::mmap<float> output) {
 
   // ------------------------
-  // Tiny caches to avoid repeated DRAM reads
+  // Tiny caches to avoid repeated DRAM reads (Uses LUTRAM instead)
   // ------------------------
   float c1_bias[kChannels1], c2_bias[kChannels2], c3_bias[kChannels3];
   float b1_w[kChannels1], b1_b[kChannels1], b1_m[kChannels1], b1_v[kChannels1];
@@ -76,7 +76,8 @@ void CnnKernel(
     b3_v[oc]    = bn3_running_var[oc];
   }
 
-  // One-time prefetch of input → tiny local buffer
+#pragma HLS ARRAY_PARTITION variable=in0 cyclic factor=K1_UNROLL dim=1  // =7
+  // One-time prefetch of input -> tiny local buffer
   float in0[kInSize];
   for (int i = 0; i < kInSize; ++i) in0[i] = input[i];
 
@@ -86,7 +87,7 @@ void CnnKernel(
   static float L1[kChannels1][kInSize];
   constexpr int pad1 = kKernel1 / 2;
 
-  // Local copy of conv1 weights (small) → allow full tap unroll
+  // Local copy of conv1 weights (small) -> allow full tap unroll
   static float w1[kChannels1][kKernel1];
 #pragma HLS ARRAY_PARTITION variable=w1 complete dim=2
   for (int oc = 0; oc < kChannels1; ++oc)
@@ -125,7 +126,7 @@ void CnnKernel(
       L1[oc][x] = max(L1[oc][x], 0.0f);
   }
 
-  // MaxPool1 → P1
+  // MaxPool1 -> P1
   static float P1[kChannels1][kSize2];
   for (int oc = 0; oc < kChannels1; ++oc) {
     [[tapa::pipeline(1)]]
@@ -186,7 +187,7 @@ void CnnKernel(
       L2[oc][x] = max(L2[oc][x], 0.0f);
   }
 
-  // MaxPool2 → P2
+  // MaxPool2 -> P2
   static float P2[kChannels2][kSize3];
   for (int oc = 0; oc < kChannels2; ++oc) {
     [[tapa::pipeline(1)]]
@@ -210,7 +211,7 @@ void CnnKernel(
 #pragma HLS ARRAY_PARTITION variable=w3 complete dim=2
     for (int ic = 0; ic < kChannels2; ++ic)
       for (int k = 0; k < kKernel3; ++k)
-        w3[ic][k] = conv3_weight(oc, ic, k);   // use your macro
+        w3[ic][k] = conv3_weight(oc, ic, k);   // use macro
 
     [[tapa::pipeline(1)]]
     for (int x = 0; x < kSize3; ++x) {
@@ -254,7 +255,7 @@ void CnnKernel(
       flat3[oc * kSize3 + x] = L3[oc][x];
   }
 
-  // FC1 (640 → 128) + ReLU
+  // FC1 (640 -> 128) + ReLU
   static float L4[LinearSize2];
 #pragma HLS ARRAY_PARTITION variable=L4 cyclic factor=IC_UNROLL dim=1
   [[tapa::pipeline(1)]]
@@ -266,7 +267,7 @@ void CnnKernel(
     L4[o] = max(acc, 0.0f);
   }
 
-  // FC2 (128 → 1000)
+  // FC2 (128 -> 1000)
   [[tapa::pipeline(1)]]
   for (int o = 0; o < kOutSize; ++o) {
     float acc = fc2_bias[o];
